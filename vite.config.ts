@@ -19,32 +19,7 @@ export default defineConfig(({mode}) => {
           description: 'Rural Healthcare AI Assistant',
           theme_color: '#00af80',
           background_color: '#fdfcfb',
-          icons: [
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'maskable'
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any'
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable'
-            }
-          ]
+          icons: []
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
