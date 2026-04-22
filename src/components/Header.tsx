@@ -16,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({ lang }) => {
         </div>
         <div className="font-bold text-xl tracking-wider uppercase">
           {lang === 'English' ? 'AAROGYAM' : t.title}
+          <span className="ml-2 text-[8px] opacity-40 font-mono lower">v1.2.0-FrontendOnly</span>
         </div>
       </div>
       

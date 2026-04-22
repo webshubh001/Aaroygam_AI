@@ -265,6 +265,17 @@ export default function App() {
             <ShieldCheck className="w-3 h-3" />
             <span>Privacy Policy</span>
           </button>
+          <button 
+            onClick={() => {
+              if (window.confirm("This will clear app cache and reload. Proceed?")) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+            className="flex items-center gap-1 hover:text-error transition-colors cursor-pointer opacity-50 text-[8px]"
+          >
+            Clear Cache & Reload
+          </button>
         </p>
       </footer>
 
