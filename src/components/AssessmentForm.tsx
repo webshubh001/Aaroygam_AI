@@ -1,0 +1,214 @@
+import React, { useState, useRef } from 'react';
+import { TRANSLATIONS, Language } from '../constants';
+import { Mic, Camera, Send, X, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+
+interface AssessmentFormProps {
+  lang: Language;
+  onAnalyze: (query: string, image?: { data: string; mimeType: string }) => void;
+  isLoading: boolean;
+  isOnline: boolean;
+}
+
+export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze, isLoading, isOnline }) => {
+  const [query, setQuery] = useState('');
+  const [image, setImage] = useState<{ data: string; mimeType: string } | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const t = TRANSLATIONS[lang] as any;
+
+  const handleVoiceInput = () => {
+    setRecordingError(null);
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      return;
+    }
+
+    if (!('webkitSpeechRecognition' in window) && !('speechRecognition' in window)) {
+      setRecordingError("Voice input is not supported in this browser. Please use Chrome.");
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    
+    recognition.lang = lang === 'Hindi' ? 'hi-IN' : lang === 'Marathi' ? 'mr-IN' : 'en-IN';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+      setRecordingError(null);
+    };
+    
+    recognition.onend = () => {
+      setIsRecording(false);
+      recognitionRef.current = null;
+    };
+    
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      setIsRecording(false);
+      recognitionRef.current = null;
+      
+      let errorMessage = "Voice input failed.";
+      if (event.error === 'not-allowed') {
+        errorMessage = "Microphone access denied. Please check settings.";
+      } else if (event.error === 'network') {
+        errorMessage = "Network error. AI needs internet for voice.";
+      } else if (event.error === 'no-speech') {
+        errorMessage = "No speech heard. Try speaking louder?";
+      } else if (event.error === 'aborted') {
+        errorMessage = null; // Ignore manual stops
+      }
+      
+      if (errorMessage) {
+        setRecordingError(errorMessage);
+      }
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[event.results.length - 1][0].transcript;
+      setQuery(prev => prev + (prev.trim() ? ' ' : '') + transcript);
+      setRecordingError(null);
+    };
+
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error("Failed to start recognition:", e);
+      setRecordingError("Could not start voice input.");
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        setImage({ data: base64String, mimeType: file.type });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() && !image) return;
+    onAnalyze(query, image || undefined);
+  };
+
+  return (
+    <div className="flex flex-col gap-6" id="assessment-form">
+      <div className="natural-card bg-surface">
+        <h3 className="section-title text-gray">{lang === 'English' ? 'Symptom Entry' : t.symptomLabel}</h3>
+        
+        <button
+          type="button"
+          onClick={handleVoiceInput}
+          className={`w-full h-24 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all cursor-pointer mb-2 ${
+            isRecording ? 'bg-error/5 border-error/40 text-error animate-pulse' : 'bg-primary/5 border-primary/30 text-primary hover:bg-primary/10'
+          }`}
+        >
+          <Mic className={`w-8 h-8 ${isRecording ? 'text-error' : 'text-primary'}`} />
+          <span className="text-sm font-bold uppercase tracking-tight">
+            {isRecording ? t.stopSpeech : t.voiceBtn}
+          </span>
+        </button>
+
+        {recordingError && (
+          <div className="text-[10px] text-error font-bold mb-4 text-center animate-bounce">
+            ⚠️ {recordingError}
+          </div>
+        )}
+
+        <textarea
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t.symptomPlaceholder}
+          className="w-full h-32 p-4 bg-background border border-secondary rounded-xl focus:border-primary/30 focus:ring-0 transition-all text-sm resize-none text-charcoal outline-none"
+        />
+      </div>
+
+      <div className="natural-card bg-surface">
+        <h3 className="section-title text-gray">{lang === 'English' ? 'Visual Scan (Optional)' : t.imageBtn}</h3>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full h-16 bg-secondary/30 border border-secondary rounded-2xl flex items-center justify-center gap-3 text-primary font-bold hover:bg-secondary/50 transition-all cursor-pointer"
+        >
+          <Camera className="w-6 h-6 text-accent" />
+          <span>{lang === 'English' ? 'Scan Skin / Infection' : t.imageBtn}</span>
+        </button>
+        <p className="text-[10px] text-gray mt-3 italic font-medium">Use for rashes, spots, or visible infection sites.</p>
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleImageUpload} 
+          accept="image/*" 
+          className="hidden" 
+        />
+
+        <AnimatePresence>
+          {image && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative mt-4 inline-block"
+            >
+              <img 
+                src={`data:${image.mimeType};base64,${image.data}`} 
+                alt="Upload preview" 
+                className="w-24 h-24 object-cover rounded-xl border-2 border-secondary shadow-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setImage(null)}
+                className="absolute -top-1 -right-1 p-1 bg-error text-white rounded-full shadow-lg"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSubmit}
+        disabled={isLoading || (!query.trim() && !image)}
+        className={`btn-primary w-full shadow-xl shadow-primary/10 flex flex-col items-center justify-center gap-1 text-lg py-4 transition-all ${
+          !isOnline ? 'bg-accent border-accent hover:bg-accent/90' : ''
+        }`}
+      >
+        {isLoading ? (
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span className="text-sm uppercase tracking-widest font-bold">{t.loading}</span>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-3">
+              {isOnline ? <Send className="w-6 h-6" /> : <div className="text-2xl">📝</div>}
+              <span className="font-bold">
+                {isOnline ? t.analyzeBtn : (lang === 'English' ? 'Log Symptoms Offline' : lang === 'Hindi' ? 'लक्षण रिकॉर्ड करें' : 'लक्षणे नोंदवा')}
+              </span>
+            </div>
+            {!isOnline && (
+              <span className="text-[10px] uppercase tracking-tighter opacity-70">
+                 {lang === 'English' ? 'Saved to local history' : lang === 'Hindi' ? 'लोकल हिस्ट्री में सुरक्षित' : 'लोकल हिस्ट्रीमध्ये सेव्ह होईल'}
+              </span>
+            )}
+          </>
+        )}
+      </button>
+    </div>
+  );
+
+};
+

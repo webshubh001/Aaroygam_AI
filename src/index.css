@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  
+  --color-primary: #0F766E;
+  --color-secondary: #A7F3D0;
+  --color-accent: #38BDF8;
+  --color-background: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-charcoal: #1F2937;
+  --color-gray: #6B7280;
+  --color-success: #22C55E;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-charcoal);
+  }
+}
+
+.natural-card {
+  border-radius: 24px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(15, 118, 110, 0.05);
+  border: 1px solid rgba(15, 118, 110, 0.1);
+}
+
+.section-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-gray);
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.btn-primary {
+  @apply bg-primary text-white px-6 py-4 rounded-[16px] font-semibold transition-all hover:opacity-90 active:scale-95 disabled:bg-stone-300;
+}
+
+@layer utilities {
+  .pdf-only {
+    display: none;
+  }
+}
+
+@media print {
+  .pdf-hide {
+    display: none !important;
+  }
+  .pdf-only {
+    display: flex !important;
+  }
+}
+
+
+

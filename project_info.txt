@@ -1,0 +1,46 @@
+PROJECT INFORMATION: AAROGYAM
+
+1. PROJECT OVERVIEW
+Name: Aarogyam (formerly GraminSeva)
+Category: Healthcare AI / Rural Tech
+Description: A web-based AI assistant for early-stage screening of diseases in rural India.
+
+2. PROBLEM STATEMENT
+Rural areas in India often have a high patient-to-doctor ratio and limited immediate access to medical guidance. Patients often ignore early symptoms or lack the means to describe them effectively in English.
+
+3. SOLUTION
+Aarogyam provides a localized, voice-enabled interface that uses Google's Gemini AI to analyze symptoms in native languages (Hindi, Marathi, English) and provides immediate, explainable risk assessments.
+
+4. SYSTEM ARCHITECTURE
+- Client: React 19 SPA (Single Page Application)
+- Hosting: Cloud Run (Vite Build)
+- AI Model: gemini-3-flash-preview (Multimodal)
+- Logic Flow:
+  a. User provides symptoms (Voice/Text) + Optional Image.
+  b. Gemini API processes query with a structured clinical system prompt.
+  c. System returns JSON containing conditions, confidence, reasoning, and risk level.
+  d. UI renders a high-contrast dashboard with color-coded alerts.
+
+5. DESIGN SPECIFICATIONS (BRANDING)
+- Theme: Professional Medical / Natural
+- Primary Color: Teal (#0F766E)
+- Secondary Color: Mint (#A7F3D0)
+- Background: Off-White (#F9FAFB)
+- Design Goal: High scannability, clear hierarchical results, and calm aesthetic.
+
+6. SAFETY PROTOCOLS
+- Hardcoded alerts for high-risk symptoms (chest pain, breathing trouble).
+- Clear disclaimer on every page and within results.
+- Confidence scores provided to show AI uncertainty.
+- No storage of PII (Personally Identifiable Information) in the current version.
+
+7. DEVELOPER INFORMATION
+- Framework: Vite + TypeScript
+- Dependencies: @google/genai, tailwindcss, motion, lucide-react
+- Port: 3000 (standard for this environment)
+- Environment Variables: VITE_GEMINI_API_KEY (hosting) or GEMINI_API_KEY (AI Studio)
+
+8. FUTURE SCOPE
+- Offline inference support for disconnected zones.
+- Integration with local government health helpline APIs.
+- Support for more regional Indian dialects (e.g., Bhojpuri, Gujarati).

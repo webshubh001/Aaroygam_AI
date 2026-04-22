@@ -1,0 +1,6 @@
+{
+  "name": "Aarogyam AI: Rural Healthcare Assistant",
+  "description": "An AI-powered assistant for early-stage disease screening and guidance in rural low-resource environments. Features include Multilingual Analysis (Hindi, Marathi, English), First Aid Guides, Health Assessment History, and Emergency SOS tools.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["AI Symptom Analysis", "Skin Image Detection", "Multilingual Support", "First Aid Guides", "Assessment History", "Voice Feedback"]
+}
