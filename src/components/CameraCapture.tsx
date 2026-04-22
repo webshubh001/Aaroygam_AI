@@ -21,21 +21,51 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
     setIsStarting(true);
     setError(null);
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' }, // Prefer back camera
+      // Clean up existing stream first
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = { 
+        video: { 
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }, 
         audio: false 
-      });
+      };
+
+      let mediaStream: MediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (e) {
+        console.warn("Back camera constraint failed, trying basic video...");
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
       setStream(mediaStream);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        // Force play specifically for mobile/low-power modes
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.error("Auto-play failed:", playErr);
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Camera access error:", err);
-      setError(lang === 'English' 
-        ? "Could not access camera. Please ensure permissions are granted." 
-        : lang === 'Hindi' 
-        ? "कैमरा एक्सेस नहीं किया जा सका। कृपया सुनिश्चित करें कि अनुमति दी गई है।" 
-        : "कॅमेरा ॲक्सेस करता आला नाही. कृपया परवानग्या दिल्या आहेत याची खात्री करा.");
+      let msg = lang === 'English' 
+        ? "Could not access camera. Please ensure permissions are granted in browser settings." 
+        : "कॅमेरा ॲक्सेस करता आला नाही. कृपया परवानग्या दिल्या आहेत याची खात्री करा.";
+      
+      if (err.name === 'NotAllowedError') {
+        msg = lang === 'English'
+          ? "Camera Permission Denied. Please click the 'Lock' icon in your browser address bar to enable it."
+          : "कॅमेरा परवानगी नाकारली. कृपया ती सक्षम करण्यासाठी तुमच्या ब्राउझरमध्ये 'लॉक' चिन्हावर क्लिक करा.";
+      }
+      setError(msg);
     } finally {
       setIsStarting(false);
     }
@@ -162,8 +192,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
                 autoPlay 
                 playsInline 
                 muted
-                onLoadedMetadata={() => videoRef.current?.play()}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover bg-black"
               />
               <div className="absolute inset-0 border-2 border-white/20 pointer-events-none flex items-center justify-center">
                  <div className="w-64 h-64 border-2 border-primary rounded-3xl opacity-40 shadow-[0_0_0_1000px_rgba(0,0,0,0.3)]"></div>

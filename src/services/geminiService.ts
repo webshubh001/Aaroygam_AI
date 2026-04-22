@@ -82,20 +82,13 @@ export async function analyzeSymptoms(
     throw new Error("API key is not configured. Please use settings to add GEMINI_API_KEY.");
   }
 
-  try {
-    const model = "gemini-flash-latest";
-    const contents: any[] = [
-      { text: `Language: ${language}. User symptoms: ${query}` }
-    ];
-
+  const tryAnalyze = async (model: string) => {
+    const contents: any[] = [{ text: `Language: ${language}. User symptoms: ${query}` }];
     if (imageData) {
       contents.push({
-        inlineData: {
-          data: imageData.data,
-          mimeType: imageData.mimeType
-        }
+        inlineData: { data: imageData.data, mimeType: imageData.mimeType }
       });
-      contents.push({ text: "Also analyze this skin image if it's related to health." });
+      contents.push({ text: "Analyze this image for health-related signs." });
     }
 
     const response = await ai.models.generateContent({
@@ -115,42 +108,16 @@ export async function analyzeSymptoms(
                   name: { type: Type.STRING },
                   confidence: { type: Type.NUMBER },
                   description: { type: Type.STRING },
-                  nextSteps: { 
-                    type: Type.ARRAY,
-                    items: { type: Type.STRING }
-                  }
+                  nextSteps: { type: Type.ARRAY, items: { type: Type.STRING } }
                 },
                 required: ["name", "confidence", "description", "nextSteps"]
               }
             },
             reasoning: { type: Type.STRING },
             xaiExplain: { type: Type.STRING },
-            imageInsight: { type: Type.STRING },
-            boundingBoxes: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  box_2d: { 
-                    type: Type.ARRAY,
-                    items: { type: Type.NUMBER }
-                  },
-                  label: { type: Type.STRING }
-                }
-              }
-            },
-            recommendation: { 
-              type: Type.STRING,
-              enum: ["Rest", "Doctor", "Urgent care"]
-            },
-            warningSigns: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            },
-            riskLevel: {
-              type: Type.STRING,
-              enum: ["Low", "Medium", "High"]
-            }
+            recommendation: { type: Type.STRING, enum: ["Rest", "Doctor", "Urgent care"] },
+            warningSigns: { type: Type.ARRAY, items: { type: Type.STRING } },
+            riskLevel: { type: Type.STRING, enum: ["Low", "Medium", "High"] }
           },
           required: ["conditions", "reasoning", "xaiExplain", "recommendation", "warningSigns", "riskLevel"]
         }
@@ -159,7 +126,21 @@ export async function analyzeSymptoms(
 
     const result = response.text || "{}";
     return JSON.parse(result);
+  };
+
+  try {
+    // Try the primary model first
+    return await tryAnalyze("gemini-flash-latest");
   } catch (err: any) {
+    // If high demand (503), try a fallback model
+    if (err?.message?.includes("503") || err?.message?.includes("high demand")) {
+      console.warn("Primary model busy, trying fallback...");
+      try {
+        return await tryAnalyze("gemini-3-flash-preview");
+      } catch (fallbackErr: any) {
+        throw new Error("The AI service is currently very busy. Please wait a minute and try your scan again.");
+      }
+    }
     console.error("Analysis error:", err);
     throw new Error(err?.message || "Failed to analyze symptoms. Please try again later.");
   }
