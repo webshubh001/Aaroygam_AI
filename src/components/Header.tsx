@@ -14,9 +14,11 @@ export const Header: React.FC<HeaderProps> = ({ lang }) => {
         <div className="w-10 h-10 bg-background rounded-xl flex items-center justify-center text-primary font-bold shadow-inner">
           <HeartPulse className="w-6 h-6" />
         </div>
-        <div className="font-bold text-xl tracking-wider uppercase">
+        <div className="font-bold text-xl tracking-wider uppercase flex items-baseline gap-2">
           {lang === 'English' ? 'AAROGYAM' : t.title}
-          <span className="ml-2 text-[8px] opacity-40 font-mono lower">v1.2.0-FrontendOnly</span>
+          <span className="bg-background/20 px-1.5 py-0.5 rounded text-[7px] font-mono tracking-normal normal-case">
+            v1.2.0
+          </span>
         </div>
       </div>
       
