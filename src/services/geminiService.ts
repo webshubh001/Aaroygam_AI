@@ -42,7 +42,7 @@ export async function findNearbyHospitals(
   lng: number,
   language: 'English' | 'Hindi' | 'Marathi'
 ): Promise<Hospital[]> {
-  try {
+  const tryFind = async (model: string) => {
     const prompt = `Find at least 3-5 actual medical facilities (hospitals or clinics) near the coordinates (${lat}, ${lng}). 
     Return the results in ${language}. 
     If no specific data is found, mention general government hospitals in that district.
@@ -53,7 +53,7 @@ export async function findNearbyHospitals(
     ]`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
+      model,
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         tools: [{ googleMaps: {} }],
@@ -67,10 +67,28 @@ export async function findNearbyHospitals(
       return JSON.parse(jsonMatch[0]);
     }
     return [];
-  } catch (e) {
-    console.error("Failed to find hospitals", e);
-    return [];
+  };
+
+  const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      return await tryFind(model);
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = err?.message || "";
+      if (errMsg.includes("503") || errMsg.includes("high demand") || errMsg.includes("UNAVAILABLE") || errMsg.includes("busy")) {
+        console.warn(`Hospital lookup busy (model ${model}), trying next...`);
+        await new Promise(r => setTimeout(r, 500));
+        continue;
+      }
+      throw err;
+    }
   }
+
+  console.error("Failed to find hospitals after fallbacks", lastError);
+  return [];
 }
 
 export async function analyzeSymptoms(
@@ -128,20 +146,32 @@ export async function analyzeSymptoms(
     return JSON.parse(result);
   };
 
-  try {
-    // Try the primary model first
-    return await tryAnalyze("gemini-flash-latest");
-  } catch (err: any) {
-    // If high demand (503), try a fallback model
-    if (err?.message?.includes("503") || err?.message?.includes("high demand")) {
-      console.warn("Primary model busy, trying fallback...");
-      try {
-        return await tryAnalyze("gemini-3-flash-preview");
-      } catch (fallbackErr: any) {
-        throw new Error("The AI service is currently very busy. Please wait a minute and try your scan again.");
+  const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
+  let lastError: any = null;
+
+  for (const model of models) {
+    try {
+      return await tryAnalyze(model);
+    } catch (err: any) {
+      lastError = err;
+      const errMsg = err?.message || "";
+      const isHighDemand = errMsg.includes("503") || 
+                          errMsg.includes("high demand") || 
+                          errMsg.includes("UNAVAILABLE") ||
+                          errMsg.includes("busy");
+      
+      if (isHighDemand) {
+        console.warn(`Model ${model} busy, trying next fallback...`);
+        // Small stagger to let the buffer clear
+        await new Promise(resolve => setTimeout(resolve, 500));
+        continue; 
       }
+      
+      // If it's a different error (like 400 or auth), re-throw immediately
+      throw err;
     }
-    console.error("Analysis error:", err);
-    throw new Error(err?.message || "Failed to analyze symptoms. Please try again later.");
   }
+
+  console.error("AI service exhausted all fallbacks:", lastError);
+  throw new Error("The AI service is currently very busy. Please wait a minute and try your scan again.");
 }
