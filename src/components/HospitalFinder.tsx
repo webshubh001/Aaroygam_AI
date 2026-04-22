@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Hospital, findNearbyHospitals } from '../services/geminiService';
 import { Language, TRANSLATIONS } from '../constants';
-import { MapPin, Phone, Navigation, Loader2, Hospital as HospitalIcon } from 'lucide-react';
+import { MapPin, Phone, Navigation, Loader2, Hospital as HospitalIcon, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Hospital, findNearbyHospitals, searchHospitalsByText } from '../services/geminiService';
 
 interface HospitalFinderProps {
   lang: Language;
@@ -14,6 +15,8 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
   const [loading, setLoading] = useState(false);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [manualLocation, setManualLocation] = useState('');
+  const [showManual, setShowManual] = useState(false);
 
   // Auto-refresh/clear when assessment changes
   React.useEffect(() => {
@@ -22,8 +25,7 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
       if (idAsNumber > 0) {
         setHospitals([]);
         setError(null);
-        // Auto-trigger the scan to ensure "freshness" for the new condition
-        findHospitals();
+        // We don't auto-trigger findHospitals here to avoid nagging for permission if they haven't explicitly asked
       }
     }
   }, [assessmentId]);
@@ -31,9 +33,11 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
   const findHospitals = () => {
     setLoading(true);
     setError(null);
+    setShowManual(false);
 
     if (!navigator.geolocation) {
       setError(t.locationError || 'Geolocation not supported');
+      setShowManual(true);
       setLoading(false);
       return;
     }
@@ -49,10 +53,12 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
           setHospitals(results);
           if (!results || results.length === 0) {
             setError(t.noHospitalsFound);
+            setShowManual(true);
           }
         } catch (err: any) {
           console.error("Gemini Hospital Search Error:", err);
           setError(t.locationError);
+          setShowManual(true);
         } finally {
           setLoading(false);
         }
@@ -60,20 +66,40 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
       (err) => {
         console.error("Geolocation error:", err);
         setLoading(false);
+        setShowManual(true);
         if (err.code === err.PERMISSION_DENIED) {
           setError(t.locationDenied);
         } else if (err.code === err.TIMEOUT) {
-          setError(lang === 'English' ? "Location request timed out. Please try again." : "लोकेशन विनंतीची वेळ संपली. पुन्हा प्रयत्न करा.");
+          setError(lang === 'English' ? "Location request timed out." : "लोकेशन विनंतीची वेळ संपली.");
         } else {
           setError(t.locationError);
         }
       },
       { 
-        enableHighAccuracy: false, // Standard accuracy is faster and more reliable in some rural areas
-        timeout: 15000, 
+        enableHighAccuracy: false, 
+        timeout: 10000, 
         maximumAge: 60000 
       }
     );
+  };
+
+  const handleManualSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualLocation.trim()) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      const results = await searchHospitalsByText(manualLocation, lang);
+      setHospitals(results);
+      if (!results || results.length === 0) {
+        setError(t.noHospitalsFound);
+      }
+    } catch (err) {
+      setError("Search failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -104,38 +130,68 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-xs text-gray font-medium animate-pulse">{t.findingHospitals}</p>
           </motion.div>
-        ) : error ? (
+        ) : (error || showManual) ? (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-4 bg-error/5 border border-error/20 rounded-xl text-error text-center text-xs font-bold"
+            className="p-4 bg-background border border-secondary rounded-2xl space-y-4"
           >
-            {error}
-            <div className="mt-3 flex flex-col gap-2">
+            {error && (
+              <p className="text-xs text-error font-bold text-center">{error}</p>
+            )}
+            
+            <form onSubmit={handleManualSearch} className="space-y-3">
+              <p className="text-[10px] text-gray uppercase font-bold text-center">
+                {lang === 'English' ? 'Enter your Town or District' : 'तुमचे शहर किंवा जिल्ह्याचे नाव टाका'}
+              </p>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  value={manualLocation}
+                  onChange={(e) => setManualLocation(e.target.value)}
+                  placeholder={lang === 'English' ? "e.g., Satara, Maharashtra" : "उदा. सातारा, महाराष्ट्र"}
+                  className="w-full pl-10 pr-4 py-3 bg-surface border border-secondary rounded-xl text-sm focus:border-primary outline-none transition-all"
+                />
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray" />
+              </div>
+              <button 
+                type="submit"
+                className="w-full py-3 bg-charcoal text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+              >
+                {lang === 'English' ? 'Search Manually' : 'मॅन्युअली शोधा'}
+              </button>
+            </form>
+
+            <div className="flex flex-col gap-2 pt-2 border-t border-secondary/50">
               <button 
                 onClick={findHospitals}
-                className="text-primary underline cursor-pointer"
+                className="text-[10px] text-primary font-bold uppercase underline cursor-pointer text-center"
               >
-                Try Again
+                {lang === 'English' ? 'Retry GPS Location' : 'GPS लोकेशन पुन्हा प्रयत्न करा'}
               </button>
               <a 
                 href="https://www.google.com/maps/search/hospitals+near+me" 
                 target="_blank" 
-                className="text-[10px] bg-secondary text-charcoal py-2 px-4 rounded-lg hover:bg-secondary/80 transition-all font-bold uppercase"
+                className="text-[9px] text-gray font-bold uppercase text-center hover:text-primary transition-colors"
               >
                 Open Google Maps Directly
               </a>
             </div>
           </motion.div>
         ) : hospitals.length > 0 ? (
-          <motion.div 
+           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-3"
           >
-            <p className="text-[10px] text-gray uppercase font-bold tracking-tight mb-2">
-              {t.hospitalInfo}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-gray uppercase font-bold tracking-tight">
+                {t.hospitalInfo}
+              </p>
+              <button onClick={() => setShowManual(true)} className="text-[9px] text-primary font-bold uppercase underline">
+                {lang === 'English' ? 'Change City' : 'शहर बदला'}
+              </button>
+            </div>
             {hospitals.map((h, i) => (
               <div key={i} className="p-4 bg-background border border-secondary rounded-2xl flex flex-col gap-2 hover:border-primary/30 transition-colors">
                 <div className="font-bold text-charcoal text-sm leading-tight">{h.name}</div>

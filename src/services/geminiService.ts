@@ -23,9 +23,10 @@ Guidelines:
 4. Safety First: If symptoms indicate an emergency (chest pain, loss of consciousness), immediately label as HIGH RISK.
 5. Mixed Language Support: Understand Hinglish (Hindi+English) and Marathi-English input.
 6. Explainable AI: For every condition, explain EXACTLY why you suggested it based on specific symptoms or image signs.
-7. Detailed Reports: For each condition, provide a brief "description" and a list of "nextSteps" (What the patient should do immediately).
-8. Image Analysis: If an image is provided, detect the affected area and provide bounding boxes in normalized coordinates [ymin, xmin, ymax, xmax] (0-1000).
-9. Return response in the user's selected language.
+7. Detailed Reports: For each condition, provide a brief "description" and a list of 4-5 actionable "nextSteps" (What the patient should do immediately). These must be practical for a rural setting.
+8. Summary Recommendation: The "recommendation" field should summarize the single most important action in your own words.
+9. Image Analysis: If an image is provided, detect the affected area and provide bounding boxes in normalized coordinates [ymin, xmin, ymax, xmax] (0-1000).
+10. Return response in the user's selected language.
 
 STRICT JSON OUTPUT FORMAT MATCHING THE SCHEMA.
 `;
@@ -91,7 +92,42 @@ export async function findNearbyHospitals(
     }
   }
 
-  console.error("Failed to find hospitals after fallbacks", lastError);
+  return [];
+}
+
+// Add the specific search method for manual input
+export async function searchHospitalsByText(
+  locationText: string,
+  language: 'English' | 'Hindi' | 'Marathi'
+): Promise<Hospital[]> {
+  const tryFind = async (model: string) => {
+    const prompt = `SEARCH AND LIST: Find 3-5 real medical centers, clinics, or hospitals in ${locationText}, India.
+    Return the results in ${language}.
+    Provide the exact Name, full Address, and estimated Distance.
+    
+    OUTPUT FORMAT: Return a valid JSON array of objects.
+    [
+      { "name": "Name of Hospital", "address": "Full Address", "distance": "distance", "contact": "phone" }
+    ]`;
+
+    const response = await ai.models.generateContent({
+      model,
+      contents: [{ parts: [{ text: prompt }] }],
+    });
+
+    const text = response.text || "";
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+  };
+
+  const models = ["gemini-flash-latest", "gemini-3-flash-preview"];
+  for (const model of models) {
+    try {
+      return await tryFind(model);
+    } catch {
+      continue;
+    }
+  }
   return [];
 }
 

@@ -248,11 +248,19 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, 
 
         <div className={cn("natural-card border-l-8", risk.bg, risk.border)}>
           <h3 className={cn("section-title mb-3 font-bold", risk.color)}>{t.recommendationTitle}</h3>
-          <ul className={cn("text-sm space-y-2 list-disc pl-5 font-bold", risk.color)}>
-            {assessment.warningSigns.map((sign, i) => (
-               <li key={i}>{sign}</li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-3">
+            <div className={cn("p-4 rounded-xl font-black text-sm uppercase tracking-wider", risk.color, "bg-white/50 backdrop-blur-sm border", risk.border)}>
+              {assessment.recommendation}
+            </div>
+            <ul className={cn("grid grid-cols-1 sm:grid-cols-2 gap-3")}>
+              {assessment.warningSigns.map((sign, i) => (
+                <li key={i} className={cn("flex items-center gap-3 p-3 rounded-xl border border-dashed", risk.border, risk.color, "bg-white/30")}>
+                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", risk.color.replace('text-', 'bg-'))} />
+                  <span className="text-sm font-bold leading-tight">{sign}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div className="bg-[#FEF2F2] border border-[#FEE2E2] p-4 rounded-2xl flex flex-col gap-3 text-error">
