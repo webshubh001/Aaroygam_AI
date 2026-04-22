@@ -78,13 +78,13 @@ export default function App() {
         id: Date.now(),
         date: new Date().toLocaleDateString(),
         query: query.substring(0, 50) + (query.length > 50 ? '...' : ''),
-        image: image // Save image to history too if needed
+        image: image 
       };
       localStorage.setItem('aarogyam_history', JSON.stringify([newEntry, ...history].slice(0, 5)));
       
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Something went wrong. Please try again.");
+      setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

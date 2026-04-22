@@ -3,6 +3,7 @@ import { TRANSLATIONS, Language } from '../constants';
 import { Mic, Camera, Send, X, Loader2, ImagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CameraCapture } from './CameraCapture';
+import { compressImage } from '../lib/utils';
 
 interface AssessmentFormProps {
   lang: Language;
@@ -56,15 +57,17 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
       setIsRecording(false);
       recognitionRef.current = null;
       
-      let errorMessage = "Voice input failed.";
+      let errorMessage = "Voice assistant error.";
       if (event.error === 'not-allowed') {
-        errorMessage = "Microphone access denied. Please check settings.";
+        errorMessage = lang === 'English' ? "Microphone access denied." : "माइक्रोफोन अनुमति अस्वीकार कर दी गई।";
       } else if (event.error === 'network') {
-        errorMessage = "Network error. AI needs internet for voice.";
+        errorMessage = lang === 'English' ? "Internet needed for voice." : "आवाज के लिए इंटरनेट की जरूरत है।";
       } else if (event.error === 'no-speech') {
-        errorMessage = "No speech heard. Try speaking louder?";
+        errorMessage = lang === 'English' ? "No speech detected." : "कोई आवाज नहीं सुनी गई।";
+      } else if (event.error === 'service-not-allowed') {
+        errorMessage = "Service not allowed (Browser limit).";
       } else if (event.error === 'aborted') {
-        errorMessage = null; // Ignore manual stops
+        errorMessage = null;
       }
       
       if (errorMessage) {
@@ -74,8 +77,13 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[event.results.length - 1][0].transcript;
-      setQuery(prev => prev + (prev.trim() ? ' ' : '') + transcript);
-      setRecordingError(null);
+      if (transcript) {
+        setQuery(prev => {
+          const newQuery = prev + (prev.trim() ? ' ' : '') + transcript;
+          return newQuery;
+        });
+        setRecordingError(null);
+      }
     };
 
     try {
@@ -90,9 +98,16 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = (reader.result as string).split(',')[1];
-        setImage({ data: base64String, mimeType: file.type });
+      reader.onloadend = async () => {
+        const base64String = (reader.result as string);
+        try {
+          const compressed = await compressImage(base64String);
+          setImage({ data: compressed, mimeType: 'image/jpeg' });
+        } catch (err) {
+          console.error("Compression failed", err);
+          const raw = base64String.split(',')[1];
+          setImage({ data: raw, mimeType: file.type });
+        }
       };
       reader.readAsDataURL(file);
     }

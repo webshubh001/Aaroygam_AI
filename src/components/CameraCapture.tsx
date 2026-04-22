@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, X, RotateCcw, Check, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { compressImage } from '../lib/utils';
 
 interface CameraCaptureProps {
   onCapture: (image: { data: string; mimeType: string }) => void;
@@ -49,7 +50,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
     };
   }, []);
 
-  const takePhoto = () => {
+  const takePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -58,8 +59,14 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedImage(dataUrl);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        
+        try {
+          const compressed = await compressImage(dataUrl);
+          setCapturedImage(`data:image/jpeg;base64,${compressed}`);
+        } catch (e) {
+          setCapturedImage(dataUrl);
+        }
         
         // Stop stream to save battery/resources
         if (stream) {
@@ -154,6 +161,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
                 ref={videoRef} 
                 autoPlay 
                 playsInline 
+                muted
+                onLoadedMetadata={() => videoRef.current?.play()}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 border-2 border-white/20 pointer-events-none flex items-center justify-center">
