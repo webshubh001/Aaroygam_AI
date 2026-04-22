@@ -9,13 +9,14 @@ import { FirstAidGuide } from './components/FirstAidGuide';
 import { EmergencySOS } from './components/EmergencySOS';
 import { InfectionHub } from './components/InfectionHub';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { OnboardingModal } from './components/OnboardingModal';
 import { analyzeSymptoms } from './services/geminiService';
 import { HealthAssessment } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Loader2, LayoutGrid, HeartPulse, History, WifiOff, ShieldCheck } from 'lucide-react';
 
 export default function App() {
-  const [lang, setLang] = useState<Language>('Hindi');
+  const [lang, setLang] = useState<Language>('English');
   const [assessment, setAssessment] = useState<HealthAssessment | null>(null);
   const [lastUploadedImage, setLastUploadedImage] = useState<{ data: string; mimeType: string } | null>(null);
   const [analysisCount, setAnalysisCount] = useState(0);
@@ -120,6 +121,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      <OnboardingModal lang={lang} onClose={() => {}} />
       <LanguageSelector current={lang} onSelect={setLang} />
 
       <main className="flex-1 max-w-[1200px] w-full mx-auto p-6 md:p-12 space-y-8 bg-gradient-to-b from-background to-secondary/10">

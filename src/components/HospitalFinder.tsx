@@ -111,12 +111,21 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
             className="p-4 bg-error/5 border border-error/20 rounded-xl text-error text-center text-xs font-bold"
           >
             {error}
-            <button 
-              onClick={findHospitals}
-              className="block mt-2 text-primary underline cursor-pointer"
-            >
-              Try Again
-            </button>
+            <div className="mt-3 flex flex-col gap-2">
+              <button 
+                onClick={findHospitals}
+                className="text-primary underline cursor-pointer"
+              >
+                Try Again
+              </button>
+              <a 
+                href="https://www.google.com/maps/search/hospitals+near+me" 
+                target="_blank" 
+                className="text-[10px] bg-secondary text-charcoal py-2 px-4 rounded-lg hover:bg-secondary/80 transition-all font-bold uppercase"
+              >
+                Open Google Maps Directly
+              </a>
+            </div>
           </motion.div>
         ) : hospitals.length > 0 ? (
           <motion.div 
@@ -163,7 +172,14 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
         ) : (
           <div className="text-center py-6">
              <div className="text-2xl mb-2 opacity-20">📍</div>
-             <p className="text-[10px] text-gray italic">Allow location to see medical facilities near you.</p>
+             <p className="text-[10px] text-gray italic mb-4">No medical centers found in your immediate vicinity using AI search.</p>
+             <a 
+                href="https://www.google.com/maps/search/hospitals+near+me" 
+                target="_blank" 
+                className="text-[10px] bg-primary/10 text-primary py-2 px-6 rounded-full hover:bg-primary/20 transition-all font-bold uppercase inline-block"
+              >
+                Search on Google Maps
+              </a>
           </div>
         )}
       </AnimatePresence>
