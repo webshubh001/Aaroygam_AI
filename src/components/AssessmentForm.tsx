@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { TRANSLATIONS, Language } from '../constants';
-import { Mic, Camera, Send, X, Loader2 } from 'lucide-react';
+import { Mic, Camera, Send, X, Loader2, ImagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CameraCapture } from './CameraCapture';
 
 interface AssessmentFormProps {
   lang: Language;
@@ -15,6 +16,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
   const [image, setImage] = useState<{ data: string; mimeType: string } | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const t = TRANSLATIONS[lang] as any;
@@ -135,15 +137,28 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
       </div>
 
       <div className="natural-card bg-surface">
-        <h3 className="section-title text-gray">{lang === 'English' ? 'Visual Scan (Optional)' : t.imageBtn}</h3>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="w-full h-16 bg-secondary/30 border border-secondary rounded-2xl flex items-center justify-center gap-3 text-primary font-bold hover:bg-secondary/50 transition-all cursor-pointer"
-        >
-          <Camera className="w-6 h-6 text-accent" />
-          <span>{lang === 'English' ? 'Scan Skin / Infection' : t.imageBtn}</span>
-        </button>
+        <h3 className="section-title text-gray">{lang === 'English' ? 'Visual Scan' : t.imageBtn}</h3>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setShowCamera(true)}
+            className="h-20 bg-primary/10 border-2 border-primary/20 rounded-2xl flex flex-col items-center justify-center gap-1 text-primary font-bold hover:bg-primary/20 transition-all cursor-pointer group"
+          >
+            <Camera className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] uppercase tracking-widest">{lang === 'English' ? 'Open Camera' : 'कॅमेरा उघडा'}</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-20 bg-secondary/30 border-2 border-secondary rounded-2xl flex flex-col items-center justify-center gap-1 text-gray font-bold hover:bg-secondary/50 transition-all cursor-pointer group"
+          >
+            <ImagePlus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] uppercase tracking-widest">{lang === 'English' ? 'Upload File' : 'फाइल निवडा'}</span>
+          </button>
+        </div>
+
         <p className="text-[10px] text-gray mt-3 italic font-medium">Use for rashes, spots, or visible infection sites.</p>
         <input 
           type="file" 
@@ -207,8 +222,20 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
           </>
         )}
       </button>
+
+      <AnimatePresence>
+        {showCamera && (
+           <CameraCapture 
+            lang={lang}
+            onClose={() => setShowCamera(false)}
+            onCapture={(captured) => {
+              setImage(captured);
+              setShowCamera(false);
+            }}
+           />
+        )}
+      </AnimatePresence>
     </div>
   );
-
 };
 
