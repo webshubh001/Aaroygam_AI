@@ -47,29 +47,31 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
             lang
           );
           setHospitals(results);
-          if (results.length === 0) {
+          if (!results || results.length === 0) {
             setError(t.noHospitalsFound);
           }
         } catch (err: any) {
           console.error("Gemini Hospital Search Error:", err);
-          
-          let errorMessage = err.message || 'API Error';
-          if (typeof errorMessage === 'string' && (errorMessage.includes('429') || errorMessage.includes('quota'))) {
-            setError(t.quotaExceeded);
-          } else {
-            setError(`${t.locationError} (${errorMessage})`);
-          }
+          setError(t.locationError);
         } finally {
           setLoading(false);
         }
       },
       (err) => {
+        console.error("Geolocation error:", err);
         setLoading(false);
         if (err.code === err.PERMISSION_DENIED) {
           setError(t.locationDenied);
+        } else if (err.code === err.TIMEOUT) {
+          setError(lang === 'English' ? "Location request timed out. Please try again." : "लोकेशन विनंतीची वेळ संपली. पुन्हा प्रयत्न करा.");
         } else {
           setError(t.locationError);
         }
+      },
+      { 
+        enableHighAccuracy: false, // Standard accuracy is faster and more reliable in some rural areas
+        timeout: 15000, 
+        maximumAge: 60000 
       }
     );
   };

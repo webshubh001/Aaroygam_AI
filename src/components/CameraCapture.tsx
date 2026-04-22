@@ -165,20 +165,45 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
         </div>
 
         <div className="relative aspect-square bg-black flex items-center justify-center overflow-hidden">
+          {(!capturedImage && !error) && (
+            <>
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                muted
+                className={`w-full h-full object-cover bg-black transition-opacity duration-300 ${isStarting ? 'opacity-0' : 'opacity-1'}`}
+              />
+              {!isStarting && (
+                <div className="absolute inset-0 border-2 border-white/20 pointer-events-none flex items-center justify-center">
+                  <div className="w-64 h-64 border-2 border-primary rounded-3xl opacity-40 shadow-[0_0_0_1000px_rgba(0,0,0,0.3)]"></div>
+                </div>
+              )}
+            </>
+          )}
+
           {isStarting && (
-            <div className="flex flex-col items-center gap-3 text-white/50">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/50 bg-black/60 backdrop-blur-sm z-10">
               <div className="w-12 h-12 border-4 border-t-primary border-white/10 rounded-full animate-spin"></div>
               <span className="text-xs font-bold uppercase tracking-widest">{lang === 'English' ? 'Initializing...' : 'सुरू होत आहे...'}</span>
             </div>
           )}
 
+          {capturedImage && (
+            <img 
+               src={capturedImage} 
+               alt="Captured" 
+               className="w-full h-full object-cover"
+             />
+          )}
+
           {error && (
-            <div className="p-8 text-center space-y-4">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-black/80 z-20">
               <div className="text-4xl">⚠️</div>
               <p className="text-sm text-white font-medium">{error}</p>
               <button 
                 onClick={startCamera}
-                className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest"
+                className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest cursor-pointer"
               >
                 {lang === 'English' ? 'Retry' : 'पुन्हा प्रयत्न करा'}
               </button>
@@ -186,31 +211,11 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
           )}
 
           {!capturedImage && !error && !isStarting && (
-            <>
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted
-                className="w-full h-full object-cover bg-black"
-              />
-              <div className="absolute inset-0 border-2 border-white/20 pointer-events-none flex items-center justify-center">
-                 <div className="w-64 h-64 border-2 border-primary rounded-3xl opacity-40 shadow-[0_0_0_1000px_rgba(0,0,0,0.3)]"></div>
-              </div>
-              <div className="absolute bottom-6 left-0 right-0 text-center px-8">
-                <p className="text-[10px] text-white/80 bg-black/40 backdrop-blur-sm py-1.5 px-3 rounded-full inline-block font-medium">
-                  {labels.instruction}
-                </p>
-              </div>
-            </>
-          )}
-
-          {capturedImage && (
-            <img 
-              src={capturedImage} 
-              alt="Captured" 
-              className="w-full h-full object-cover"
-            />
+            <div className="absolute bottom-6 left-0 right-0 text-center px-8 z-10 pointer-events-none">
+              <p className="text-[10px] text-white/80 bg-black/40 backdrop-blur-sm py-1.5 px-3 rounded-full inline-block font-medium">
+                {labels.instruction}
+              </p>
+            </div>
           )}
 
           <canvas ref={canvasRef} className="hidden" />

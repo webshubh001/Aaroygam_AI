@@ -43,13 +43,13 @@ export async function findNearbyHospitals(
   language: 'English' | 'Hindi' | 'Marathi'
 ): Promise<Hospital[]> {
   const tryFind = async (model: string) => {
-    const prompt = `Find at least 3-5 actual medical facilities (hospitals or clinics) near the coordinates (${lat}, ${lng}). 
-    Return the results in ${language}. 
-    If no specific data is found, mention general government hospitals in that district.
+    const prompt = `Identify 3-5 real medical centers, clinics, Primary Health Centers (PHC), or District Hospitals near latitude ${lat}, longitude ${lng} in India. 
+    If no clinics are found right at the coordinates, search the nearest large town or district headquarters within 20km.
+    Return ONLY a JSON array.
     
-    STRICT JSON OUTPUT FORMAT:
+    JSON FORMAT:
     [
-      { "name": "string", "address": "string", "distance": "string (optional)", "contact": "string (optional)" }
+      { "name": "Name", "address": "Detailed Address", "distance": "~10km", "contact": "Phone if available" }
     ]`;
 
     const response = await ai.models.generateContent({
