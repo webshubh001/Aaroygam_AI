@@ -95,10 +95,10 @@ export async function findNearbyHospitals(
   };
 
   const models = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-3-flash-preview"
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview"
   ];
   let lastError: any = null;
 
@@ -148,9 +148,9 @@ export async function searchHospitalsByText(
   };
 
   const models = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash"
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-flash-preview"
   ];
   for (const model of models) {
     try {
@@ -215,10 +215,10 @@ export async function analyzeSymptoms(
   };
 
   const models = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-3-flash-preview"
+    "gemini-flash-latest",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview"
   ];
   let lastError: any = null;
 
