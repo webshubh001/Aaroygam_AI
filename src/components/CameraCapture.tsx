@@ -24,7 +24,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
     setError(null);
     try {
       const constraints = { 
-        video: { facingMode: 'environment' }, 
+        video: { facingMode: { ideal: 'environment' } }, 
         audio: false 
       };
 
@@ -48,18 +48,6 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
       }
       streamRef.current = mediaStream;
       setStream(mediaStream);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        // Force play specifically for mobile/low-power modes
-        try {
-          await videoRef.current.play();
-        } catch (playErr: any) {
-          if (playErr.name !== 'AbortError') {
-            console.error("Auto-play failed:", playErr);
-          }
-        }
-      }
       
       // Safety net: in case onLoadedMetadata doesn't fire reliably in this browser context
       setTimeout(() => {
@@ -94,6 +82,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
       }
     };
   }, []);
+
+  // Ensure the native video element receives the stream whenever it re-renders or the stream state updates
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(playErr => {
+        if (playErr.name !== 'AbortError') {
+          console.error("Auto-play failed:", playErr);
+        }
+      });
+    }
+  }, [stream]);
 
   const takePhoto = async () => {
     setIsFlashing(true);
