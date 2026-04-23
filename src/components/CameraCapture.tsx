@@ -12,27 +12,19 @@ interface CameraCaptureProps {
 export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose, lang }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(true);
   const [isFlashing, setIsFlashing] = useState(false);
 
-  const startCamera = async () => {
+  const startCamera = async (mountedRef: { current: boolean }) => {
     setIsStarting(true);
     setError(null);
     try {
-      // Clean up existing stream first
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-
       const constraints = { 
-        video: { 
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }, 
+        video: { facingMode: 'environment' }, 
         audio: false 
       };
 
@@ -44,6 +36,17 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
         mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       }
 
+      if (!mountedRef.current) {
+        // Component unmounted while we were waiting for the user to approve permissions!
+        mediaStream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
+      // Safe to assign
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      streamRef.current = mediaStream;
       setStream(mediaStream);
       
       if (videoRef.current) {
@@ -51,11 +54,20 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
         // Force play specifically for mobile/low-power modes
         try {
           await videoRef.current.play();
-        } catch (playErr) {
-          console.error("Auto-play failed:", playErr);
+        } catch (playErr: any) {
+          if (playErr.name !== 'AbortError') {
+            console.error("Auto-play failed:", playErr);
+          }
         }
       }
+      
+      // Safety net: in case onLoadedMetadata doesn't fire reliably in this browser context
+      setTimeout(() => {
+        if (mountedRef.current) setIsStarting(false);
+      }, 500);
+
     } catch (err: any) {
+      if (!mountedRef.current) return;
       console.error("Camera access error:", err);
       let msg = lang === 'English' 
         ? "Could not access camera. Please ensure permissions are granted in browser settings." 
@@ -67,16 +79,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
           : "कॅमेरा परवानगी नाकारली. कृपया ती सक्षम करण्यासाठी तुमच्या ब्राउझरमध्ये 'लॉक' चिन्हावर क्लिक करा.";
       }
       setError(msg);
-    } finally {
-      setIsStarting(false);
+      setIsStarting(false); // Only set false on error to hide loader. Let onLoadedMetadata handle success
     }
   };
 
   useEffect(() => {
-    startCamera();
+    const mountedRef = { current: true };
+    startCamera(mountedRef);
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      mountedRef.current = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
   }, []);
@@ -88,11 +102,15 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      
+      const width = video.videoWidth || video.clientWidth || 1080;
+      const height = video.videoHeight || video.clientHeight || 1080;
+
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, width, height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
         
         try {
@@ -103,8 +121,9 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
         }
         
         // Stop stream to save battery/resources
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
           setStream(null);
         }
       }
@@ -113,7 +132,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
 
   const handleRetake = () => {
     setCapturedImage(null);
-    startCamera();
+    startCamera({ current: true }); // temporary ref since this is user-initiated action within an already mounted component
   };
 
   const handleConfirm = () => {
@@ -176,7 +195,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
                 autoPlay 
                 playsInline 
                 muted
-                className={`w-full h-full object-cover bg-black transition-opacity duration-300 ${isStarting ? 'opacity-0' : 'opacity-1'}`}
+                onLoadedMetadata={() => setIsStarting(false)}
+                className="w-full h-full object-cover bg-black"
               />
               {!isStarting && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -211,7 +231,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
           </AnimatePresence>
 
           {isStarting && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/50 bg-black/60 backdrop-blur-sm z-10">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/50 bg-black/60 z-10">
               <div className="w-12 h-12 border-4 border-t-primary border-white/10 rounded-full animate-spin"></div>
               <span className="text-xs font-bold uppercase tracking-widest">{lang === 'English' ? 'Initializing...' : 'सुरू होत आहे...'}</span>
             </div>

@@ -72,19 +72,25 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
       
       let errorMessage = "Voice assistant error.";
       if (event.error === 'not-allowed') {
-        errorMessage = lang === 'English' ? "Microphone access denied." : "माइक्रोफोन अनुमति अस्वीकार कर दी गई।";
+        errorMessage = lang === 'English' 
+          ? "Microphone access denied. Please click the lock icon in your address bar to allow microphone." 
+          : "माइक्रोफोन अनुमति अस्वीकार कर दी गई। कृपया एड्रेस बार में लॉक आइकन पर क्लिक करें।";
       } else if (event.error === 'network') {
-        errorMessage = lang === 'English' ? "Internet needed for voice." : "आवाज के लिए इंटरनेट की जरूरत है।";
+        errorMessage = lang === 'English' 
+          ? "Speech recognition network error. This happens occasionally in some browsers. Please try again or type your symptom." 
+          : "नेटवर्क त्रुटि: कुछ ब्राउज़रों में कभी-कभी यह समस्या आती है। कृपया दोबारा प्रयास करें या अपना लक्षण टाइप करें।";
       } else if (event.error === 'no-speech') {
         errorMessage = lang === 'English' ? "No speech detected." : "कोई आवाज नहीं सुनी गई।";
       } else if (event.error === 'service-not-allowed') {
-        errorMessage = "Service not allowed (Browser limit).";
+        errorMessage = lang === 'English' ? "Browser voice service not allowed or rate limited." : "ब्राउज़र वॉयस सेवा की अनुमति नहीं है।";
       } else if (event.error === 'aborted') {
         errorMessage = null;
       }
       
       if (errorMessage) {
         setRecordingError(errorMessage);
+        // Auto clear the error after a few seconds so it doesn't stay permanently
+        setTimeout(() => setRecordingError(null), 6000);
       }
     };
 

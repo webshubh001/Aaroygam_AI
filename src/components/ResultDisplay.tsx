@@ -35,6 +35,11 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, 
     window.print();
   };
 
+  // Preemptively load voices in some browsers
+  useEffect(() => {
+    window.speechSynthesis.getVoices();
+  }, []);
+
   const handleSpeak = () => {
     if (isSpeaking) {
       window.speechSynthesis.cancel();
@@ -49,8 +54,27 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, 
     `;
 
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = lang === 'Hindi' ? 'hi-IN' : lang === 'Marathi' ? 'mr-IN' : 'en-IN';
     
+    // Determine target system locale
+    const targetLang = lang === 'Hindi' ? 'hi-IN' : lang === 'Marathi' ? 'mr-IN' : 'en-IN';
+    utterance.lang = targetLang;
+    
+    // Explicitly scan and assign a specific installed voice
+    const voices = window.speechSynthesis.getVoices();
+    let preferredVoice = voices.find(v => v.lang.replace('_', '-') === targetLang);
+    
+    // Intelligent Fallbacks if exactly 'mr-IN' or 'hi-IN' isn't explicitly tagged
+    if (!preferredVoice && lang === 'Marathi') {
+      preferredVoice = voices.find(v => v.name.toLowerCase().includes('marathi')) || voices.find(v => v.lang.startsWith('hi'));
+    }
+    if (!preferredVoice && lang === 'Hindi') {
+      preferredVoice = voices.find(v => v.name.toLowerCase().includes('hindi')) || voices.find(v => v.lang.startsWith('mr'));
+    }
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
