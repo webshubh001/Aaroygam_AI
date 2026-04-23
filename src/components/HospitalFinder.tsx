@@ -77,8 +77,8 @@ export const HospitalFinder: React.FC<HospitalFinderProps> = ({ lang, assessment
       },
       { 
         enableHighAccuracy: false, 
-        timeout: 10000, 
-        maximumAge: 60000 
+        timeout: 30000, 
+        maximumAge: 300000 
       }
     );
   };
