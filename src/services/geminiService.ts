@@ -74,7 +74,11 @@ export async function findNearbyHospitals(
     return [];
   };
 
-  const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
+  const models = [
+    "gemini-1.5-flash",          // High quota, very reliable
+    "gemini-3.1-flash-lite-preview", 
+    "gemini-3-flash-preview"
+  ];
   let lastError: any = null;
 
   for (const model of models) {
@@ -83,8 +87,8 @@ export async function findNearbyHospitals(
     } catch (err: any) {
       lastError = err;
       const errMsg = err?.message || "";
-      if (errMsg.includes("503") || errMsg.includes("high demand") || errMsg.includes("UNAVAILABLE") || errMsg.includes("busy")) {
-        console.warn(`Hospital lookup busy (model ${model}), trying next...`);
+      if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("503") || errMsg.includes("high demand") || errMsg.includes("UNAVAILABLE") || errMsg.includes("busy")) {
+        console.warn(`Hospital lookup busy/quota (model ${model}), trying next...`);
         await new Promise(r => setTimeout(r, 500));
         continue;
       }
@@ -120,12 +124,20 @@ export async function searchHospitalsByText(
     return jsonMatch ? JSON.parse(jsonMatch[0]) : [];
   };
 
-  const models = ["gemini-flash-latest", "gemini-3-flash-preview"];
+  const models = [
+    "gemini-1.5-flash",
+    "gemini-3.1-flash-lite-preview", 
+    "gemini-3-flash-preview"
+  ];
   for (const model of models) {
     try {
       return await tryFind(model);
-    } catch {
-      continue;
+    } catch (err: any) {
+      const errMsg = err?.message || "";
+      if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("503") || errMsg.includes("busy")) {
+         continue;
+      }
+      continue; // or re-throw if it's structural
     }
   }
   return [];
@@ -186,7 +198,11 @@ export async function analyzeSymptoms(
     return JSON.parse(result);
   };
 
-  const models = ["gemini-flash-latest", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"];
+  const models = [
+    "gemini-1.5-flash",          // High quota, very reliable
+    "gemini-3.1-flash-lite-preview", 
+    "gemini-3-flash-preview"
+  ];
   let lastError: any = null;
 
   for (const model of models) {
@@ -195,13 +211,15 @@ export async function analyzeSymptoms(
     } catch (err: any) {
       lastError = err;
       const errMsg = err?.message || "";
-      const isHighDemand = errMsg.includes("503") || 
+      const isHighDemand = errMsg.includes("429") || 
+                          errMsg.toLowerCase().includes("quota") || 
+                          errMsg.includes("503") || 
                           errMsg.includes("high demand") || 
                           errMsg.includes("UNAVAILABLE") ||
                           errMsg.includes("busy");
       
       if (isHighDemand) {
-        console.warn(`Model ${model} busy, trying next fallback...`);
+        console.warn(`Model ${model} busy or quota exceeded, trying next fallback...`);
         // Small stagger to let the buffer clear
         await new Promise(resolve => setTimeout(resolve, 500));
         continue; 
@@ -213,5 +231,5 @@ export async function analyzeSymptoms(
   }
 
   console.error("AI service exhausted all fallbacks:", lastError);
-  throw new Error("The AI service is currently very busy. Please wait a minute and try your scan again.");
+  throw new Error("API Quota exceeded or service busy across all models. Please try again soon.");
 }

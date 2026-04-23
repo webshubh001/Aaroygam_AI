@@ -16,6 +16,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(true);
+  const [isFlashing, setIsFlashing] = useState(false);
 
   const startCamera = async () => {
     setIsStarting(true);
@@ -29,8 +30,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
       const constraints = { 
         video: { 
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         }, 
         audio: false 
       };
@@ -81,6 +82,9 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
   }, []);
 
   const takePhoto = async () => {
+    setIsFlashing(true);
+    setTimeout(() => setIsFlashing(false), 200);
+
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -175,12 +179,36 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
                 className={`w-full h-full object-cover bg-black transition-opacity duration-300 ${isStarting ? 'opacity-0' : 'opacity-1'}`}
               />
               {!isStarting && (
-                <div className="absolute inset-0 border-2 border-white/20 pointer-events-none flex items-center justify-center">
-                  <div className="w-64 h-64 border-2 border-primary rounded-3xl opacity-40 shadow-[0_0_0_1000px_rgba(0,0,0,0.3)]"></div>
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                  <div className="relative w-64 h-64 border border-white/10 shadow-[0_0_0_1000px_rgba(0,0,0,0.4)]">
+                    {/* Corner Brackets */}
+                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                    {/* Animated scanning line */}
+                    <motion.div 
+                      animate={{ top: ['0%', '100%', '0%'] }} 
+                      transition={{ duration: 3, repeat: Infinity, ease: 'linear' }} 
+                      className="absolute left-0 right-0 h-0.5 bg-primary/70 shadow-[0_0_12px_3px_rgba(15,118,110,0.6)]" 
+                    />
+                  </div>
                 </div>
               )}
             </>
           )}
+
+          {/* Flash Effect */}
+          <AnimatePresence>
+            {isFlashing && (
+              <motion.div 
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 0 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-white z-40"
+              />
+            )}
+          </AnimatePresence>
 
           {isStarting && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/50 bg-black/60 backdrop-blur-sm z-10">
