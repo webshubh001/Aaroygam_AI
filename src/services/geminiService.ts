@@ -1,7 +1,27 @@
 import { HealthAssessment } from "../types";
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const getApiKey = () => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GEMINI_API_KEY) {
+    return import.meta.env.VITE_GEMINI_API_KEY;
+  }
+  if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) {
+    return process.env.GEMINI_API_KEY;
+  }
+  return "";
+};
+
+let aiClient: GoogleGenAI | null = null;
+const getAi = () => {
+  if (!aiClient) {
+    const key = getApiKey();
+    if (!key) {
+      throw new Error("API key is not configured. On Vercel, please add VITE_GEMINI_API_KEY to your Environment Variables.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: key });
+  }
+  return aiClient;
+};
 
 const SYSTEM_PROMPT = `
 You are Aarogyam AI, an expert rural healthcare assistant specialized in common infections found in Indian rural environments. 
@@ -57,7 +77,7 @@ export async function findNearbyHospitals(
       { "name": "Name of Hospital", "address": "Full Street/Village Address", "distance": "distance in km", "contact": "phone number" }
     ]`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: [{ parts: [{ text: prompt }] }],
       config: {
@@ -114,7 +134,7 @@ export async function searchHospitalsByText(
       { "name": "Name of Hospital", "address": "Full Address", "distance": "distance", "contact": "phone" }
     ]`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: [{ parts: [{ text: prompt }] }],
     });
@@ -148,9 +168,6 @@ export async function analyzeSymptoms(
   language: 'English' | 'Hindi' | 'Marathi',
   imageData?: { data: string; mimeType: string }
 ): Promise<HealthAssessment> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("API key is not configured. Please use settings to add GEMINI_API_KEY.");
-  }
 
   const tryAnalyze = async (model: string) => {
     const contents: any[] = [{ text: `Language: ${language}. User symptoms: ${query}` }];
@@ -161,7 +178,7 @@ export async function analyzeSymptoms(
       contents.push({ text: "Analyze this image for health-related signs." });
     }
 
-    const response = await ai.models.generateContent({
+    const response = await getAi().models.generateContent({
       model,
       contents: { parts: contents },
       config: {
