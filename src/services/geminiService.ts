@@ -82,7 +82,6 @@ export async function findNearbyHospitals(
       contents: [{ parts: [{ text: prompt }] }],
       config: {
         tools: [{ googleMaps: {} }],
-        toolConfig: { includeServerSideToolInvocations: true },
       }
     });
 
