@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { TRANSLATIONS, Language } from '../constants';
 import { Mic, Camera, Send, X, Loader2, ImagePlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,9 +18,22 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
   const [isRecording, setIsRecording] = useState(false);
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const t = TRANSLATIONS[lang] as any;
+
+  useEffect(() => {
+    let interval: any;
+    if (isLoading) {
+      interval = setInterval(() => {
+        setLoadingStep(s => (s + 1) % 4);
+      }, 2500);
+    } else {
+      setLoadingStep(0);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleVoiceInput = () => {
     setRecordingError(null);
@@ -212,15 +225,44 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ lang, onAnalyze,
         type="button"
         onClick={handleSubmit}
         disabled={isLoading || (!query.trim() && !image)}
-        className={`btn-primary w-full shadow-xl shadow-primary/10 flex flex-col items-center justify-center gap-1 text-lg py-4 transition-all ${
+        className={`btn-primary w-full shadow-xl shadow-primary/10 flex flex-col items-center justify-center gap-1 text-lg py-4 transition-all overflow-hidden relative ${
           !isOnline ? 'bg-accent border-accent hover:bg-accent/90' : ''
         }`}
       >
         {isLoading ? (
-          <div className="flex items-center gap-3">
-            <Loader2 className="w-6 h-6 animate-spin" />
-            <span className="text-sm uppercase tracking-widest font-bold">{t.loading}</span>
-          </div>
+          <>
+            <div className="absolute inset-0 bg-white/20 animate-pulse pointer-events-none" />
+            <div className="flex flex-col items-center gap-1">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <motion.span 
+                key={loadingStep}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-[11px] uppercase tracking-widest font-bold"
+              >
+                {
+                   lang === 'English' ? [
+                     'Analyzing Symptoms...', 
+                     'Scanning Image Data...', 
+                     'Checking Medical Knowledge...', 
+                     'Finalizing Report...'
+                   ][loadingStep] : 
+                   lang === 'Hindi' ? [
+                     'लक्षणों का विश्लेषण...', 
+                     'छवि डेटा स्कैनिंग...', 
+                     'मेडिकल ज्ञान की जांच...', 
+                     'रिपोर्ट तैयार हो रही है...'
+                   ][loadingStep] : [
+                     'लक्षणे तपासत आहे...', 
+                     'प्रतिमा डेटा स्कॅन करत आहे...', 
+                     'वैद्यकीय माहिती तपासत आहे...', 
+                     'अहवाल तयार करत आहे...'
+                   ][loadingStep]
+                }
+              </motion.span>
+            </div>
+          </>
         ) : (
           <>
             <div className="flex items-center gap-3">
