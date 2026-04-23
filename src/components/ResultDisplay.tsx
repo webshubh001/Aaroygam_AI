@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HealthAssessment } from '../services/geminiService';
 import { TRANSLATIONS, Language } from '../constants';
 import { AlertCircle, CheckCircle, ArrowLeft, ShieldAlert, Volume2, VolumeX, Download, BrainCircuit, ScanSearch, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import { ReportImage } from './ReportImage';
 
 interface ResultDisplayProps {
@@ -19,8 +17,6 @@ interface ResultDisplayProps {
 export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, onReset, uploadedImage }) => {
   const t = TRANSLATIONS[lang] as any;
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const reportRef = useRef<HTMLDivElement>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const getRiskStyles = (level: string) => {
     switch (level) {
@@ -33,66 +29,10 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, 
   const risk = getRiskStyles(assessment.riskLevel);
 
   const handleDownloadPdf = async () => {
-    if (!reportRef.current) return;
-    setIsGeneratingPdf(true);
-    try {
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#F9FAFB', // Match app background
-        onclone: (clonedDoc) => {
-          // Remove all style links/tags that might contain oklch/oklab to prevent internal parser errors
-          const styles = Array.from(clonedDoc.querySelectorAll('style, link[rel="stylesheet"]'));
-          styles.forEach(s => {
-            if (s.textContent?.includes('okl') || (s instanceof HTMLLinkElement && s.href)) {
-               if (s.textContent) {
-                 s.textContent = s.textContent.replace(/okl(ch|ab)\([^)]+\)/g, '#000000');
-               }
-            }
-          });
-          
-          // Force standard visibility for elements
-          const pdfOnly = clonedDoc.querySelectorAll('.pdf-only') as NodeListOf<HTMLElement>;
-          pdfOnly.forEach(el => {
-            el.style.display = 'flex';
-            el.style.visibility = 'visible';
-          });
-
-          // Ensure the container has full height for capture
-          const container = clonedDoc.getElementById('result-display');
-          if (container) {
-            container.style.height = 'auto';
-            container.style.overflow = 'visible';
-            container.style.width = '800px'; // Set fixed width for more predictable multi-column layouts
-          }
-
-          // Force standard fonts for specific sections
-          const proseSections = clonedDoc.querySelectorAll('.prose, p, li, span');
-          proseSections.forEach(s => {
-             const el = s as HTMLElement;
-             el.style.fontFamily = 'Arial, sans-serif';
-             el.style.color = '#1F2937';
-          });
-        }
-      });
-      const imgData = canvas.toDataURL('image/png');
-      
-      // Calculate dimensions to fit content
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      // Use custom page height if content is longer than A4 (297mm)
-      const pdfHeight = Math.max(297, imgHeight + 10); 
-      const pdf = new jsPDF('p', 'mm', [imgWidth, pdfHeight]);
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`Aarogyam-Report-${Date.now()}.pdf`);
-    } catch (err) {
-      console.error("PDF generation failed", err);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
+    // Using the native print API provides perfect vector PDF rendering, 
+    // bypasses HTML2Canvas CSS parser crashes (like OKLCH issues),
+    // and keeps text fully copy-pasteable.
+    window.print();
   };
 
   const handleSpeak = () => {
@@ -131,13 +71,12 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, 
       className="flex flex-col gap-4"
       id="result-display"
     >
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 pdf-hide">
         <button
           onClick={handleDownloadPdf}
-          disabled={isGeneratingPdf}
-          className="flex-1 min-w-[200px] flex items-center justify-center gap-3 bg-charcoal text-white px-6 py-5 rounded-2xl font-bold hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
+          className="flex-1 min-w-[200px] flex items-center justify-center gap-3 bg-charcoal text-white px-6 py-5 rounded-2xl font-bold hover:bg-black transition-all shadow-lg active:scale-[0.98]"
         >
-          {isGeneratingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+          <Download className="w-5 h-5" />
           <span>{lang === 'English' ? 'Download Report (PDF)' : 'रिपोर्ट डाउनलोड करें (PDF)'}</span>
         </button>
 
@@ -154,7 +93,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, 
         </button>
       </div>
 
-      <div ref={reportRef} className="bg-background p-6 space-y-6">
+      <div className="bg-background p-6 space-y-6" id="report-content">
         {/* Report Header Logo (for PDF) */}
         <div className="hidden pdf-only flex items-center gap-2 mb-4 border-b pb-4">
              <div className="text-2xl font-black text-[#0F766E]">AAROGYAM AI</div>
@@ -282,7 +221,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ assessment, lang, 
 
       <button
         onClick={onReset}
-        className="flex items-center justify-center gap-2 py-4 text-gray font-bold text-xs uppercase tracking-widest hover:text-primary transition-colors"
+        className="flex items-center justify-center gap-2 py-4 text-gray font-bold text-xs uppercase tracking-widest hover:text-primary transition-colors pdf-hide"
       >
         <ArrowLeft className="w-4 h-4" />
         {t.startOver}

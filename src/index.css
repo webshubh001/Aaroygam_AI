@@ -50,11 +50,35 @@
 }
 
 @media print {
-  .pdf-hide {
+  /* Force exact background colors and gradients in print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide navigation, sidebar, and non-report elements entirely */
+  header, nav, aside, .pdf-hide {
     display: none !important;
   }
+  
   .pdf-only {
     display: flex !important;
+  }
+
+  /* Clean up layout to be a single clean page for the report */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body {
+    background-color: white !important;
+  }
+
+  #report-content {
+    box-shadow: none !important;
+    padding: 0 !important;
   }
 }
 
