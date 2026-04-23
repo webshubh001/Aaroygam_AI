@@ -200,6 +200,18 @@ export async function analyzeSymptoms(
             },
             reasoning: { type: Type.STRING },
             xaiExplain: { type: Type.STRING },
+            imageInsight: { type: Type.STRING },
+            boundingBoxes: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  box_2d: { type: Type.ARRAY, items: { type: Type.NUMBER } },
+                  label: { type: Type.STRING }
+                },
+                required: ["box_2d", "label"]
+              }
+            },
             recommendation: { type: Type.STRING, enum: ["Rest", "Doctor", "Urgent care"] },
             warningSigns: { type: Type.ARRAY, items: { type: Type.STRING } },
             riskLevel: { type: Type.STRING, enum: ["Low", "Medium", "High"] }
