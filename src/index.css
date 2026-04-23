@@ -50,10 +50,20 @@
 }
 
 @media print {
+  @page {
+    margin: 1.5cm;
+    size: A4 portrait;
+  }
+
   /* Force exact background colors and gradients in print */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  body {
+    background-color: white !important;
+    font-size: 11pt !important;
   }
 
   /* Hide navigation, sidebar, and non-report elements entirely */
@@ -65,15 +75,16 @@
     display: flex !important;
   }
 
+  .print-break-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
   /* Clean up layout to be a single clean page for the report */
   main {
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
-  }
-
-  body {
-    background-color: white !important;
   }
 
   #report-content {
